@@ -7,6 +7,7 @@ public class MeshCombiner : MonoBehaviour
     public enum CombineQueue
     {
         Combine = 0,
+        CombineSortingMaterials = 7,
         ByAtlasing = 1,
         ByAtlasingOnlyColors = 2,
         SeparateSubmeshes = 3,
@@ -56,6 +57,9 @@ public class MeshCombiner : MonoBehaviour
         {
             case CombineQueue.Combine:
                 Combine();
+                break;
+            case CombineQueue.CombineSortingMaterials:
+                CombineSorting();
                 break;
             case CombineQueue.ByAtlasing:
                 CombineByAtlassing();

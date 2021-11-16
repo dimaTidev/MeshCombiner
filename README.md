@@ -6,6 +6,7 @@ Bake system for fast mesh bake in runtime or editor
 - Combine with atlasing color (vertex color to texture block)
 - [Editor] Save meshes to asset files
 - [Editor] Save texture atlas to asset
+- [Editor] Extract simple colliders
 
 
 # How to use

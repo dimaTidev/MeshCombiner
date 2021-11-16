@@ -1,9 +1,10 @@
 Bake system for fast mesh bake in runtime or editor
 - Combine
 - Combine with sort material (each bake by unique material)
-- Separate submeshes
+- Combine with random vertex color
 - Combine with atlasing
 - Combine with atlasing color (vertex color to texture block)
+- Separate submeshes
 - [Editor] Save meshes to asset files
 - [Editor] Save texture atlas to asset
 - [Editor] Extract simple colliders

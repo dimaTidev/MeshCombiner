@@ -2,23 +2,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-#if UNITY_EDITOR
-using UnityEditor;
-using System.IO;
-#endif
-
 public class MeshCombiner : MonoBehaviour
 {
-    public enum CombineQueue 
-    { 
-        Combine = 0, 
-        CombineByAtlasing = 1, 
-        CombineByAtlasingOnlyColors = 2, 
-        SeparateSubmeshes = 3, 
-        CombineWithLocalPositionsVector2 = 4, 
-        CombineWithLocalPositionsVector3 = 5 
+    public enum CombineQueue
+    {
+        Combine = 0,
+        ByAtlasing = 1,
+        ByAtlasingOnlyColors = 2,
+        SeparateSubmeshes = 3,
+        WithLocalPositionsVector2 = 4,
+        WithLocalPositionsVector3 = 5,
+        RandomColorByMesh = 6
     }
-
     [SerializeField] CombineQueue[] combineQueues;
 
     [SerializeField] bool disableCombineInStart;
@@ -62,20 +57,23 @@ public class MeshCombiner : MonoBehaviour
             case CombineQueue.Combine:
                 Combine();
                 break;
-            case CombineQueue.CombineByAtlasing:
+            case CombineQueue.ByAtlasing:
                 CombineByAtlassing();
                 break;
-            case CombineQueue.CombineByAtlasingOnlyColors:
+            case CombineQueue.ByAtlasingOnlyColors:
                 CombineByAtlasingOnlyColors();
                 break;
             case CombineQueue.SeparateSubmeshes:
                 UnCombineSubmesh();
                 break;
-            case CombineQueue.CombineWithLocalPositionsVector2:
+            case CombineQueue.WithLocalPositionsVector2:
                 Combine(1);
                 break;
-            case CombineQueue.CombineWithLocalPositionsVector3:
+            case CombineQueue.WithLocalPositionsVector3:
                 Combine(2);
+                break;
+            case CombineQueue.RandomColorByMesh:
+                Combine_ByRandomColorByMesh();
                 break;
         }
     }
@@ -118,12 +116,12 @@ public class MeshCombiner : MonoBehaviour
            return mesh;
        }*/
 
-    public Mesh Combine(int isBakeLocalPositions = 0)
+    public (Mesh, MeshFilter[]) Combine(int isBakeLocalPositions = 0)
     {
         MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
         MeshRenderer[] meshRenderers = GetComponentsInChildren<MeshRenderer>();
         if (meshFilters == null || meshFilters.Length == 0 || meshRenderers == null || meshRenderers.Length == 0)
-            return null;
+            return (null, null);
 
 
         /*   for (int i = 0; i < meshFilters.Length; i++)
@@ -149,7 +147,7 @@ public class MeshCombiner : MonoBehaviour
         CheckRenderFiltersToActive(ref meshRenderers);
 
         transform.localScale = Vector3.one;
-        return null;
+        return (mesh, meshFilters);
     }
 
     public Mesh Combine_ByLocalPositions_SameMeshes(ref Mesh mesh, ref MeshFilter[] meshFilters, bool isUseLocalPosVector3)
@@ -203,7 +201,7 @@ public class MeshCombiner : MonoBehaviour
                 meshRenderers[i].enabled = false;
     }
 
-    (MeshFilter, MeshRenderer) Create_MyRenderFilter(MeshRenderer mr_from)
+    (MeshFilter, MeshRenderer) Create_MyRenderFilter(MeshRenderer mr_from = null)
     {
         MeshFilter myMF = gameObject.GetComponent<MeshFilter>();
         if (!myMF) myMF = gameObject.AddComponent<MeshFilter>();
@@ -214,7 +212,10 @@ public class MeshCombiner : MonoBehaviour
         //myMR.material = transform.GetChild(0).GetComponent<Renderer>().sharedMaterial;
 
         // myMR.material = transform.GetComponentInChildren<Renderer>().sharedMaterial;
-        if (mr_from)
+
+        if (resultMaterial)
+            myMR.material = resultMaterial;
+        else if (mr_from)
             myMR.material = mr_from.sharedMaterial;
 
         myMR.lightProbeUsage = enableLightProbeBlend ? UnityEngine.Rendering.LightProbeUsage.BlendProbes : UnityEngine.Rendering.LightProbeUsage.Off;
@@ -332,8 +333,13 @@ public class MeshCombiner : MonoBehaviour
     {
         //--- Combine ------------------------------------------------------------
         UnCombineSubmesh();
-        MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
-        Mesh mesh = Combine();
+        (Mesh mesh, MeshFilter[] meshFilters) = Combine();
+
+        if (mesh == null || meshFilters == null)
+        {
+            Debug.Log("Mesh bake error: no result mesh or meshFilters in child");
+            return null;
+        }
 
         //--- Make Atlas ------------------------------------------------------------
         List<Material> materials = new List<Material>();
@@ -410,15 +416,44 @@ public class MeshCombiner : MonoBehaviour
         return texture;
     }
 
+    public Mesh Combine_ByRandomColorByMesh()
+    {
+        (Mesh mesh, MeshFilter[] meshFilters) = Combine();
+
+        if (mesh == null || meshFilters == null)
+        {
+            Debug.Log("Mesh bake error: no result mesh or meshFilters in child");
+            return null;
+        }
+
+        Color randomColor;
+        int vertexOffset = 0;
+        int vertCount;
+
+        Color[] colors = new Color[mesh.vertexCount];
+
+        for (int i = 0; i < meshFilters.Length; i++)
+        {
+            vertCount = meshFilters[i].mesh.vertexCount;
+            randomColor = Random.ColorHSV();
+
+            for (int k = 0; k < vertCount; k++)
+                colors[vertexOffset + k] = randomColor;
+            vertexOffset += vertCount;
+        }
+
+        mesh.colors = colors;
+        return mesh;
+    }
+
     public Texture2D CombineByAtlassing()
     {
         //--- Combine ------------------------------------------------------------
-        MeshFilter[] meshFilters = GetComponentsInChildren<MeshFilter>();
-        Mesh mesh = Combine();
+        (Mesh mesh, MeshFilter[] meshFilters) = Combine();
 
-        if (!mesh)
+        if (mesh == null || meshFilters == null)
         {
-            Debug.Log("No combined mesh");
+            Debug.Log("Mesh bake error: no result mesh or meshFilters in child");
             return null;
         }
 
@@ -601,5 +636,4 @@ public class MeshCombiner : MonoBehaviour
         for (int i = 0; i < allChilds.Length; i++)
             DestroyImmediate(allChilds[i]);
     }
-
 }

@@ -10,7 +10,7 @@ Bake system for fast mesh bake in runtime or editor
 
 
 # How to use
-- Setup hierarchy => all meshes parented to one object
+- Setup hierarchy => all meshes parented to one object (parent must be clear from meshFilter or meshRenderer)
 - Drop to parent `MeshCombiner.cs`
 - Select bake queue in script
 - Use editor buttons if need bake in editor

@@ -25,6 +25,7 @@ public class MeshCombiner : MonoBehaviour
     [SerializeField] bool isDeactiveMeshRenderersAfterBake;
 
     [HideInInspector] public List<GameObject> combainInstances; //save instancies for easy clear childs or instancies
+    Transform parent; //temp position for reset before & after combine
     Vector3 position; //temp position for reset before & after combine
     Vector3 rotation; //temp rotation for reset before & after combine
     void Start()
@@ -316,14 +317,14 @@ public class MeshCombiner : MonoBehaviour
             gos[i] = new GameObject();
             gos[i].transform.parent = transform;
             MeshFilter meshFilter = gos[i].AddComponent<MeshFilter>();
-            meshFilter.mesh = Combine(targets[i].ToArray());
+            meshFilter.mesh = Combine(targets[i].ToArray()); //PrepareRoot
             MeshRenderer meshRenderer = gos[i].AddComponent<MeshRenderer>();
             meshRenderer.material = materials[i];
             meshRenderer.lightProbeUsage = enableLightProbeBlend ? UnityEngine.Rendering.LightProbeUsage.BlendProbes : UnityEngine.Rendering.LightProbeUsage.Off;
             meshRenderer.reflectionProbeUsage = enableLightProbeBlend ? UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes : UnityEngine.Rendering.ReflectionProbeUsage.Off;
             gos[i].name = materials[i].name;
             if (combainInstances == null) combainInstances = new List<GameObject>();
-            combainInstances.Add(gos[i]);
+                combainInstances.Add(gos[i]);
         }
         PrepareRoot(false);
     }
@@ -520,7 +521,7 @@ public class MeshCombiner : MonoBehaviour
         return atlas;
     }
 
-    Texture2D CoppyUnreadableTexture(Texture2D texture)
+    public static Texture2D CoppyUnreadableTexture(Texture2D texture)
     {
         RenderTexture tmp = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
         Graphics.Blit(texture, tmp);
@@ -572,15 +573,40 @@ public class MeshCombiner : MonoBehaviour
         for (int i = 0; i < transform.childCount; i++)
             transform.GetChild(i).gameObject.SetActive(state);
     }
+
+    bool isPreparedToBake = false;
+    int siblingIndex;
     void PrepareRoot(bool isPrepare)
     {
         if (isPrepare)
         {
-            position = transform.position;
-            rotation = transform.rotation.eulerAngles;
+            if (!isPreparedToBake)
+            {
+                parent = transform.parent;
+                siblingIndex = transform.GetSiblingIndex();
+                if (parent != null)
+                {
+                    transform.SetParent(null);
+                    transform.localScale = Vector3.one;
+                }
+                position = transform.position;
+                rotation = transform.rotation.eulerAngles;
+                transform.position = Vector3.zero;
+                transform.rotation = Quaternion.identity;
+                isPreparedToBake = true;
+            }
         }
-        transform.position = isPrepare ? Vector3.zero : position;
-        transform.rotation = isPrepare ? Quaternion.identity : Quaternion.Euler(rotation);
+        else if(isPreparedToBake)
+        {
+            transform.position = position;
+            transform.rotation = Quaternion.Euler(rotation);
+            if (parent)
+            {
+                transform.SetParent(parent);
+                transform.localScale = Vector3.one;
+            }
+            transform.SetSiblingIndex(siblingIndex);
+        }
     }
 
     public void UnparentChilds()

@@ -1,3 +1,14 @@
 {
-"name" : "com.dimati.meshbaking.Runtime"
+    "name": "com.dimati.meshbaking.Runtime",
+    "references": [
+        "com.dimati.gl.Runtime"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
 }

@@ -13,5 +13,10 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/dimaTidev/MeshCombiner.git"
+    },
+    "gitDependencies": {
+        "com.dimati.gl": "https://github.com/dimaTidev/GL_Render.git#0.0.1"
+    },
+    "dependencies": {
     }
 }

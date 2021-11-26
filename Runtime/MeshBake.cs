@@ -67,36 +67,56 @@ namespace DimaTi.MeshBaking
             InvokeBake();
         }
 
-        public void InvokeBake()
+        public void InvokeBake() => InvokeBake(gameObject, null);
+        public void InvokeBake(GameObject root, MeshFilter[] meshFilters)
         {
             if (bakeType == BakeType.Combine)
-                Bake();
+                Bake(root, meshFilters);
             else if (bakeType == BakeType.Combine_SortByMaterial)
-                Combine_WithSortByMaterial();
+                Combine_WithSortByMaterial(root, meshFilters);
             else if (bakeType == BakeType.Combine_SortByShaderWithAtlasing)
-                Combine_SortByShaderAndAtlasing();
+                Combine_SortByShaderAndAtlasing(root, meshFilters);
         }
+
+
+        #region Bakes ContextMenu
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        [ContextMenu("Simple combine")]
+        void Bake() => Bake(gameObject, null);
+        [ContextMenu("Combine with sort material")]
+        void Combine_WithSortByMaterial() => Combine_WithSortByMaterial(gameObject, null);
+        [ContextMenu("Combine Atlasing sort by shader")]
+        void Combine_SortByShaderAndAtlasing() => Combine_SortByShaderAndAtlasing(gameObject, null);
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        #endregion
 
         #region Bakes
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        [ContextMenu("Simple combine")]
-        void Bake() //(Mesh, MeshFilter[])
+        void Bake(GameObject root, MeshFilter[] meshFilters) //(Mesh, MeshFilter[])
         {
             ClearLastBake();
-            MeshFilter[] meshFilters = GetMeshFilters(gameObject);
+
+            if(meshFilters == null || meshFilters.Length == 0)
+                meshFilters = GetMeshFilters(gameObject);
 
             if (meshFilters == null || meshFilters.Length == 0 || meshFilters[0] == null || !meshFilters[0].GetComponent<MeshRenderer>())
                 return;// (null, null);
 
-            (MeshFilter myMF, _) = Create_MyRenderFilter(false, meshFilters[0].gameObject.layer, meshFilters[0].GetComponent<MeshRenderer>()?.sharedMaterial);
+            (MeshFilter myMF, _) = Create_MyRenderFilter(root, false, meshFilters[0].gameObject.layer, meshFilters[0].GetComponent<MeshRenderer>()?.sharedMaterial);
 
-            Mesh mesh = Combine(meshFilters);
+            Mesh mesh = Combine(root, meshFilters);
 
             myMF.mesh = mesh;
 
-          //  if (combainInstances == null) combainInstances = new List<GameObject>(); //For reset in editor
-          //  combainInstances.Add(gameObject);
+            //  if (combainInstances == null) combainInstances = new List<GameObject>(); //For reset in editor
+            //  combainInstances.Add(gameObject);
 
+            if (isDeactiveMeshRenderersAfterBake)
+            {
+                for (int i = 0; i < meshFilters.Length; i++)
+                    meshFilters[i].GetComponent<MeshRenderer>().enabled = false;
+            }
+                
             transform.gameObject.SetActive(true);
 
           //  CheckRenderFiltersToActive(ref meshRenderers); //deactive if only deactive mesh renders
@@ -104,15 +124,15 @@ namespace DimaTi.MeshBaking
             //transform.localScale = Vector3.one;
             return;// (mesh, meshFilters);
         }
-        [ContextMenu("Combine with sort material")]
-        void Combine_WithSortByMaterial() //CombineSorting
+        void Combine_WithSortByMaterial(GameObject root, MeshFilter[] meshFilters) //CombineSorting
         {
             ClearLastBake();
-            PrepareRoot(true);
+            PrepareRoot(root, true);
             List<Material> materials = new List<Material>();
             List<List<MeshFilter>> targets = new List<List<MeshFilter>>();
 
-            MeshFilter[] meshFilters = GetMeshFilters(gameObject);
+            if (meshFilters == null || meshFilters.Length == 0)
+                meshFilters = GetMeshFilters(gameObject);
 
             MeshRenderer mr;
             MeshFilter mf;
@@ -142,25 +162,24 @@ namespace DimaTi.MeshBaking
 
             for (int i = 0; i < targets.Count; i++)
             {
-                Create_MyRenderFilter(true, targets[i][0].gameObject.layer, materials[i], Combine(targets[i].ToArray()));
+                Create_MyRenderFilter(root, true, targets[i][0].gameObject.layer, materials[i], Combine(root, targets[i].ToArray()));
 
               //  if (combainInstances == null) combainInstances = new List<GameObject>();
               //  combainInstances.Add(gos[i]);
             }
-            PrepareRoot(false);
+            PrepareRoot(root, false);
         }
-
-        [ContextMenu("Combine Atlasing sort by shader")]
-        void Combine_SortByShaderAndAtlasing()
+        void Combine_SortByShaderAndAtlasing(GameObject root, MeshFilter[] meshFilters)
         {
             ClearLastBake();
-            PrepareRoot(true);
+            PrepareRoot(root, true);
             
             Dictionary<int, Shader> shaders = new Dictionary<int, Shader>();
             Dictionary<int, List<MeshFilter>> filters = new Dictionary<int, List<MeshFilter>>();
             Dictionary<int, List<Material>> renderers = new Dictionary<int, List<Material>>();
 
-            MeshFilter[] meshFilters = GetMeshFilters(gameObject);
+            if (meshFilters == null || meshFilters.Length == 0)
+               meshFilters = GetMeshFilters(gameObject);
 
             MeshRenderer mr;
             MeshFilter mf;
@@ -194,7 +213,7 @@ namespace DimaTi.MeshBaking
                 if (meshFilter.Value == null || meshFilter.Value.Count == 0)
                     continue;
 
-                Mesh mesh = Combine(meshFilter.Value.ToArray());
+                Mesh mesh = Combine(root, meshFilter.Value.ToArray());
                 Material material = new Material(renderers[meshFilter.Key][0]);
 
                 int id = atlasBakeSetup.FindIndex(x => x.shader.GetInstanceID() == shaders[meshFilter.Key].GetInstanceID());
@@ -217,17 +236,17 @@ namespace DimaTi.MeshBaking
               //  else
               //      material.SetTexture("_MainTex", CombineByAtlassing(mesh, meshFilter.Value, renderers[meshFilter.Key]));  // Atlasing   
  
-                Create_MyRenderFilter(true, meshFilter.Value[0].gameObject.layer, material, mesh);
+                Create_MyRenderFilter(root, true, meshFilter.Value[0].gameObject.layer, material, mesh);
             }
 
-            PrepareRoot(false);
+            PrepareRoot(root, false);
         }
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #endregion
 
-        Mesh Combine(MeshFilter[] meshFilters)
+        Mesh Combine(GameObject root, MeshFilter[] meshFilters)
         {
-            PrepareRoot(true); //--------------------------------------------------------
+            PrepareRoot(root, true); //--------------------------------------------------------
             if (meshFilters == null || meshFilters.Length == 0)
             {
                 print("Not has meshes to combine: " + gameObject.name);
@@ -257,10 +276,9 @@ namespace DimaTi.MeshBaking
                 for (int k = 0; k < bakeOptions.Length; k++)
                     bakeOptions[k].Bake(ref mesh, ref meshFilters);
 
-            PrepareRoot(false); //--------------------------------------------------------
+            PrepareRoot(root, false); //--------------------------------------------------------
             return mesh;
         }
-
 
         void CombineByAtlassing(Mesh mesh, List<MeshFilter> meshFilters, List<Material> materials, ref Material outMaterial, MaterialAtlasBakeSetup bakeSetup)
         {
@@ -397,24 +415,27 @@ namespace DimaTi.MeshBaking
 
         MeshFilter[] GetMeshFilters(GameObject target) => target ? target.GetComponentsInChildren<MeshFilter>() : new MeshFilter[0];
 
-        (MeshFilter, MeshRenderer) Create_MyRenderFilter(bool isCreateInChild = false, int layer = 0, Material sharedMaterial = null, Mesh mesh = null)
+        (MeshFilter, MeshRenderer) Create_MyRenderFilter(GameObject root, bool isCreateInChild = false, int layer = 0, Material sharedMaterial = null, Mesh mesh = null)
         {
             MeshFilter myMF;
             MeshRenderer myMR;
 
+            if (!root)
+                root = gameObject;
+
             if (!isCreateInChild)
             {
-                myMF = gameObject.GetComponent<MeshFilter>();
-                if (!myMF) myMF = gameObject.AddComponent<MeshFilter>();
-                myMR = gameObject.GetComponent<MeshRenderer>();
-                if (!myMR) myMR = gameObject.AddComponent<MeshRenderer>();
+                myMF = root.GetComponent<MeshFilter>();
+                if (!myMF) myMF = root.AddComponent<MeshFilter>();
+                myMR = root.GetComponent<MeshRenderer>();
+                if (!myMR) myMR = root.AddComponent<MeshRenderer>();
             }
             else
             {
                 GameObject go;
                 if (prefabCombinedInstance)
                 {
-                    go = Instantiate(prefabCombinedInstance, transform);
+                    go = Instantiate(prefabCombinedInstance, root.transform);
 
                     myMF = go.GetComponent<MeshFilter>();
                     if (!myMF) myMF = go.AddComponent<MeshFilter>();
@@ -430,7 +451,7 @@ namespace DimaTi.MeshBaking
 
                 go.name = sharedMaterial ? sharedMaterial.name : mesh ? mesh.name : "BakedMesh";
                 go.layer = layer;
-                go.transform.SetParent(transform);
+                go.transform.SetParent(root.transform);
                 go.transform.SetAsFirstSibling();
                 go.transform.localPosition = Vector3.zero;
                 go.transform.localRotation = Quaternion.identity;
@@ -489,36 +510,38 @@ namespace DimaTi.MeshBaking
         bool isPreparedToBake = false; //temp for reset before & after combine
         int siblingIndex; //temp for reset before & after combine
 
-        void PrepareRoot(bool isPrepare)
+        void PrepareRoot(GameObject rootGO, bool isPrepare)
         {
+            Transform root = rootGO ? rootGO.transform : transform;
+
             if (isPrepare)
             {
                 if (!isPreparedToBake)
                 {
-                    parent = transform.parent;
-                    siblingIndex = transform.GetSiblingIndex();
-                    oldScale = transform.localScale;
+                    parent = root.parent;
+                    siblingIndex = root.GetSiblingIndex();
+                    oldScale = root.localScale;
 
                     if (parent != null)
-                        transform.SetParent(null);
-                    position = transform.position;
-                    rotation = transform.rotation.eulerAngles;
-                    
-                    
-                    transform.position = Vector3.zero;
-                    transform.rotation = Quaternion.identity;
-                    transform.localScale = Vector3.one;
+                        root.SetParent(null);
+                    position = root.position;
+                    rotation = root.rotation.eulerAngles;
+
+
+                    root.position = Vector3.zero;
+                    root.rotation = Quaternion.identity;
+                    root.localScale = Vector3.one;
                     isPreparedToBake = true;
                 }
             }
             else if (isPreparedToBake)
             {
-                transform.position = position;
-                transform.rotation = Quaternion.Euler(rotation);
+                root.position = position;
+                root.rotation = Quaternion.Euler(rotation);
                 if (parent)
-                    transform.SetParent(parent);
-                transform.SetSiblingIndex(siblingIndex);
-                transform.localScale = oldScale;
+                    root.SetParent(parent);
+                root.SetSiblingIndex(siblingIndex);
+                root.localScale = oldScale;
                 isPreparedToBake = false;
 
                 SendEndBake();

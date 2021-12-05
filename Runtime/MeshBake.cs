@@ -332,7 +332,10 @@ namespace DimaTi.MeshBaking
             {
                 RenderTexture rt = new RenderTexture(maxTextureSize, maxTextureSize, 0);
                 GLRender.DrawAtlas(ref rt, ref packRect, ref textures);
-                atlas = rt;
+                atlas = ToTexture2D(rt);
+                rt.Release();
+                if (rt)
+                    Destroy(rt);
             }
 
             atlas.name = "Combined_atlas";
@@ -412,6 +415,19 @@ namespace DimaTi.MeshBaking
         //           for (int i = 0; i < meshRenderer.Length; i++)
         //              meshRenderer[i].enabled = false;
         //  }
+
+        Texture2D ToTexture2D(RenderTexture rTex, TextureFormat format = TextureFormat.RGB24)
+        {
+            Texture2D tex = new Texture2D(rTex.width, rTex.height, format, false);
+            var old_rt = RenderTexture.active;
+            RenderTexture.active = rTex;
+
+            tex.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
+            tex.Apply();
+
+            RenderTexture.active = old_rt;
+            return tex;
+        }
 
         MeshFilter[] GetMeshFilters(GameObject target) => target ? target.GetComponentsInChildren<MeshFilter>() : new MeshFilter[0];
 

@@ -10,6 +10,6 @@ public class MeshBake_DoneEvent : MonoBehaviour
     public void OnBakeDone() 
     {
         onBakeDone?.Invoke();
-        Debug.Log("Invoke bake end!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        //Debug.Log("Invoke bake end!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 }

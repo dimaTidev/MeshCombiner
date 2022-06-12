@@ -43,7 +43,8 @@ namespace DimaTi.MeshBaking
             public class TextureData
             {
                 public string textureKey = "_MainTex";
-                [Header("-1 if uvMap is equals in index `0`")]
+                //[Header("-1 if uvMap is equals in index `0`")]
+                [Header("-1 if you need pack this atlas to exact same rect[] which uses in '0'")]
                 public int idUv = 0;
                 public int maxTextureSize = 1024;
                 //public int isTheSameIn = -1;
@@ -67,6 +68,7 @@ namespace DimaTi.MeshBaking
             InvokeBake();
         }
 
+        [ContextMenu("Invoke Bake")]
         public void InvokeBake() => InvokeBake(gameObject, null);
         public void InvokeBake(GameObject root, MeshFilter[] meshFilters)
         {
@@ -81,12 +83,12 @@ namespace DimaTi.MeshBaking
 
         #region Bakes ContextMenu
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        [ContextMenu("Simple combine")]
-        void Bake() => Bake(gameObject, null);
-        [ContextMenu("Combine with sort material")]
-        void Combine_WithSortByMaterial() => Combine_WithSortByMaterial(gameObject, null);
-        [ContextMenu("Combine Atlasing sort by shader")]
-        void Combine_SortByShaderAndAtlasing() => Combine_SortByShaderAndAtlasing(gameObject, null);
+       // [ContextMenu("Simple combine")]
+       // void Bake() => Bake(gameObject, null);
+       // [ContextMenu("Combine with sort material")]
+       // void Combine_WithSortByMaterial() => Combine_WithSortByMaterial(gameObject, null);
+       // [ContextMenu("Combine Atlasing sort by shader")]
+       // void Combine_SortByShaderAndAtlasing() => Combine_SortByShaderAndAtlasing(gameObject, null);
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         #endregion
 
@@ -274,7 +276,14 @@ namespace DimaTi.MeshBaking
             // Aditive bakeOptions
             if(bakeOptions != null)
                 for (int k = 0; k < bakeOptions.Length; k++)
-                    bakeOptions[k].Bake(ref mesh, ref meshFilters);
+                    if (bakeOptions[k])
+                    {
+                        bakeOptions[k].Bake(ref mesh, ref meshFilters);
+                    }
+                    else{
+                        Debug.LogWarning("Not all MeshBake.cs 'bakeOptions' Exist!: " + gameObject.name);
+                    }
+                        
 
             PrepareRoot(root, false); //--------------------------------------------------------
             return mesh;
@@ -375,7 +384,7 @@ namespace DimaTi.MeshBaking
                        
 
                     idRect = materials.IndexOf(meshFilters[i].GetComponent<MeshRenderer>().sharedMaterial);
-                    Debug.Log("idRect : " + idRect);
+                    //Debug.Log("idRect : " + idRect);
                     uvOffset = meshFilters[i].sharedMesh.uv;
                     for (int k = 0; k < uvOffset.Length; k++)
                     {
@@ -517,6 +526,7 @@ namespace DimaTi.MeshBaking
                 }
         }
 
+        [Tooltip("Instantiate this gameObject and set CombinedMesh to it")]
         [SerializeField] GameObject prefabCombinedInstance;
 
         Transform parent; //temp for reset before & after combine

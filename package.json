@@ -1,9 +1,9 @@
 {
     "name": "com.dimati.meshbaking",
-    "displayName": "Mesh Baker",
-    "version": "0.0.2",
+    "displayName": "Mesh Combiner",
+    "version": "1.0.0",
     "unity": "2018.4",
-    "description": "",
+    "description": "Universal Mesh Combiner",
     "author": "DimaTi <timofeenkodima@gmail.com> (https://github.com/dimaTidev)",
     "keywords": [
         "Base"
@@ -17,5 +17,12 @@
         "com.dimati.gl": "https://github.com/dimaTidev/GL_Render.git#0.0.1"
     },
     "dependencies": {
-    }
+    },
+    "samples": [
+        {
+            "displayName": "ScriptableObject Functions",
+            "description": "Contains ScriptableObjects Functions",
+            "path": "Samples~/Functions"
+        }
+    ]
 }

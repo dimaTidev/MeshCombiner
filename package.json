@@ -1,7 +1,7 @@
 {
     "name": "com.dimati.meshbaking",
     "displayName": "Mesh Combiner",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "unity": "2018.4",
     "description": "Universal Mesh Combiner",
     "author": "DimaTi <timofeenkodima@gmail.com> (https://github.com/dimaTidev)",
